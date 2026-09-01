@@ -24,7 +24,26 @@ impl Page for HomePage {
         println!("     id     |               name               |      status      ");
 
         // TODO: print out epics using get_column_string(). also make sure the epics are sorted by id
-
+        let db = self.db.read_db()?;
+        for line in db.epics
+        .keys()
+        .sorted()
+        .map(|epic_id| (epic_id, db.epics.get(epic_id)))
+        .flat_map(|epic| {
+            let (epic_id, epic) = epic;
+            match epic {
+                Some(epic) => Some(format!(
+                    "{}|{}|{}",
+                    get_column_string(&format!("{}", epic_id), 12),
+                    get_column_string(&epic.name, 34),
+                    get_column_string(&epic.status.to_string(), 18),
+                )),
+                None => None,
+            }
+        }) {
+            println!("{}", line);
+        }
+        
         println!();
         println!();
 
@@ -34,7 +53,30 @@ impl Page for HomePage {
     }
 
     fn handle_input(&self, input: &str) -> Result<Option<Action>> {
-        todo!() // match against the user input and return the corresponding action. If the user input was invalid return None.
+        // match against the user input and return the corresponding action.
+        // If the user input was invalid return None.
+        match input {
+            "q" => Ok(Some(Action::Exit)),
+            "c" => Ok(Some(Action::CreateEpic)),
+            input => {
+                let parsed = input.parse::<u32>();
+                match parsed {
+                    Ok(epic_id) => {
+                        match self.db.read_db() {
+                           Ok(db) => {
+                                match db.epics.get(&epic_id) {
+                                    Some(_) =>
+                                        Ok(Some(Action::NavigateToEpicDetail { epic_id })),
+                                    None => Ok(None),
+                                }
+                           },
+                           Err(_) => Ok(None),
+                        }
+                    },
+                    Err(_) => Ok(None),
+                }
+            },
+        }
     }
 }
 
