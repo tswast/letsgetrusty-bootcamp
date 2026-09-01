@@ -21,21 +21,58 @@ impl Prompts {
 }
 
 fn create_epic_prompt() -> Epic {
-    todo!();
+    println!("----------------------------");
+    println!("Epic Name: ");
+    let name = get_user_input();
+    println!("Epic Description: ");
+    let description = get_user_input();
+    Epic {
+        name,
+        description,
+        status: Status::Open,
+        stories: Vec::new(),
+    }
 }
 
 fn create_story_prompt() -> Story {
-    todo!();
+    println!("----------------------------");
+    println!("Story Name: ");
+    let name = get_user_input();
+    println!("Story Description: ");
+    let description = get_user_input();
+    Story {
+        name,
+        description,
+        status: Status::Open,
+    }
 }
 
 fn delete_epic_prompt() -> bool {
-    todo!();
+    println!("----------------------------");
+    println!("Are you sure you want to delete this epic? All stories in this epic will also be deleted [Y/n]: ");
+    match get_user_input().as_ref() {
+        "" | "Y" | "y" => true,
+        _ => false,
+    }
 }
 
 fn delete_story_prompt() -> bool {
-    todo!();
+    println!("----------------------------");
+    println!("Are you sure you want to delete this story? [Y/n]: ");
+    match get_user_input().as_ref() {
+        "" | "Y" | "y" => true,
+        _ => false,
+    }
 }
 
 fn update_status_prompt() -> Option<Status> {
-    todo!();
+    println!("----------------------------");
+    println!("Are you sure you want to delete this story? [Y/n]: ");
+    match get_user_input().as_ref() {
+        "1" => Some(Status::Open),
+        "2" => Some(Status::InProgress),
+        "3" => Some(Status::Resolved),
+        "4" => Some(Status::Closed),
+        _ => None,
+    }
 }
