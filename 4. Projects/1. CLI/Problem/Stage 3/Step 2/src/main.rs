@@ -31,7 +31,7 @@ fn main() {
             );
             wait_for_key_press();
         };
-        let action = match current_page.handle_input(&io_utils::get_user_input()) {
+        let action = match current_page.handle_input(&io_utils::get_user_input().trim()) {
             Ok(action) => action,
             Err(error) => {
                 println!(
@@ -42,6 +42,7 @@ fn main() {
                 None
             }
         };
+        println!("got action {action:?}");
         if let Some(action) = action {
             if let Err(error) = navigator.handle_action(action) {
                 println!(
