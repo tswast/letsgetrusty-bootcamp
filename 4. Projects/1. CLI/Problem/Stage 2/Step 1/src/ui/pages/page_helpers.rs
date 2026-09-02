@@ -1,7 +1,19 @@
 use ellipse::Ellipse;
 
 pub fn get_column_string(text: &str, width: usize) -> String {
-    todo!() // use the truncate_ellipse function from the ellipse crate
+    if text.len() <= width {
+        return format!("{:<width$}", text);
+    }
+
+    match width {
+        0 => "".to_owned(),
+        1 => ".".to_owned(),
+        2 => "..".to_owned(),
+        3 => "...".to_owned(),
+        _ => {
+            format!("{:<width$}", text.truncate_ellipse(width - 3).as_ref())
+        }
+    }
 }
 
 #[cfg(test)]

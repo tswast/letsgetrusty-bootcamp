@@ -1,6 +1,6 @@
 use std::fs;
-
-use anyhow::Result;
+use std::collections::hash_map;
+use anyhow::{anyhow, Result};
 
 use crate::models::{DBState, Epic, Story, Status};
 
@@ -10,35 +10,106 @@ pub struct JiraDatabase {
 
 impl JiraDatabase {
     pub fn new(file_path: String) -> Self {
-        todo!()
+        let database = Box::new(JSONFileDatabase {
+            file_path,
+        });
+        Self {
+            database,
+        }
     }
 
     pub fn read_db(&self) -> Result<DBState> {
-        todo!()
+        self.database.read_db()
     }
     
     pub fn create_epic(&self, epic: Epic) -> Result<u32> {
-        todo!()
+        let mut db = self.database.read_db()?;
+        let epic_id = db.last_item_id + 1;
+        if let hash_map::Entry::Vacant(entry) = db.epics.entry(epic_id) {
+            entry.insert_entry(epic);
+        } else {
+            return Err(anyhow!("database already has an epic with id {epic_id}"));
+        }
+        db.last_item_id = epic_id;
+        self.database.write_db(&db)?;
+        Ok(epic_id)
     }
     
     pub fn create_story(&self, story: Story, epic_id: u32) -> Result<u32> {
-        todo!()
+        let mut db = self.database.read_db()?;
+        let story_id = db.last_item_id + 1;
+        if let hash_map::Entry::Vacant(entry) = db.stories.entry(story_id) {
+            entry.insert_entry(story);
+        } else {
+            return Err(anyhow!("database already has a story with id {story_id}"));
+        }
+        if let hash_map::Entry::Occupied(mut entry) = db.epics.entry(epic_id) {
+            entry.get_mut().stories.push(story_id);
+        } else {
+            return Err(anyhow!("database is missing Epic with id {epic_id}"));
+        }
+        db.last_item_id = story_id;
+        self.database.write_db(&db)?;
+        Ok(story_id)
     }
     
     pub fn delete_epic(&self, epic_id: u32) -> Result<()> {
-        todo!()
+        let mut db = self.database.read_db()?;
+        if let hash_map::Entry::Occupied(entry) = db.epics.entry(epic_id) {
+            let (_, epic) = entry.remove_entry();
+            for story_id in epic.stories {
+                if let hash_map::Entry::Occupied(story_entry) = db.stories.entry(story_id) {
+                    story_entry.remove_entry();
+                }
+            }
+        } else {
+            return Err(anyhow!("database is missing an epic with id {epic_id}"));
+        }
+        self.database.write_db(&db)?;
+        Ok(())
     }
     
     pub fn delete_story(&self,epic_id: u32, story_id: u32) -> Result<()> {
-        todo!()
+        let mut db = self.database.read_db()?;
+        if let hash_map::Entry::Occupied(entry) = db.stories.entry(story_id) {
+            entry.remove_entry();
+        } else {
+            return Err(anyhow!("database is missing a story with id {story_id}"));
+        }
+        if let hash_map::Entry::Occupied(mut entry) = db.epics.entry(epic_id) {
+            let epic = entry.get_mut();
+            if let Some(index) = epic.stories.iter().position(|value| *value == story_id) {
+                epic.stories.swap_remove(index);
+            }
+        } else {
+            return Err(anyhow!("database is missing an epic with id {epic_id}"));
+        }
+        self.database.write_db(&db)?;
+        Ok(())
     }
     
     pub fn update_epic_status(&self, epic_id: u32, status: Status) -> Result<()> {
-        todo!()
+        let mut db = self.database.read_db()?;
+        if let hash_map::Entry::Occupied(mut entry) = db.epics.entry(epic_id) {
+            let epic = entry.get_mut();
+            epic.status = status;
+        } else {
+            return Err(anyhow!("database is missing an epic with id {epic_id}"));
+        }
+        self.database.write_db(&db)?;
+        Ok(())
     }
     
     pub fn update_story_status(&self, story_id: u32, status: Status) -> Result<()> {
-        todo!()
+        let mut db = self.database.read_db()?;
+        if let hash_map::Entry::Occupied(mut entry) = db.stories.entry(story_id) {
+            let story = entry.get_mut();
+            story.status = status;
+        } else {
+            return Err(anyhow!("database is missing a story with id {story_id}"));
+        }
+        self.database.write_db(&db)?;
+        Ok(())
     }
 }
 
@@ -81,14 +152,12 @@ pub mod test_utils {
 
     impl Database for MockDB {
         fn read_db(&self) -> Result<DBState> {
-            // TODO: fix this error by deriving the appropriate traits for Story
             let state = self.last_written_state.borrow().clone();
             Ok(state)
         }
 
         fn write_db(&self, db_state: &DBState) -> Result<()> {
             let latest_state = &self.last_written_state;
-            // TODO: fix this error by deriving the appropriate traits for DBState
             *latest_state.borrow_mut() = db_state.clone();
             Ok(())
         }
@@ -105,7 +174,6 @@ mod tests {
         let db = JiraDatabase { database: Box::new(MockDB::new()) };
         let epic = Epic::new("".to_owned(), "".to_owned());
 
-        // TODO: fix this error by deriving the appropriate traits for Epic
         let result = db.create_epic(epic.clone());
         
         assert_eq!(result.is_ok(), true);
@@ -142,7 +210,6 @@ mod tests {
 
         let epic_id = result.unwrap();
 
-        // TODO: fix this error by deriving the appropriate traits for Story
         let result = db.create_story(story.clone(), epic_id);
         assert_eq!(result.is_ok(), true);
 
