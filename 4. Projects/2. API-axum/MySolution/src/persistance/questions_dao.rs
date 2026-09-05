@@ -16,7 +16,7 @@ pub struct QuestionsDaoImpl {
 
 impl QuestionsDaoImpl {
     pub fn new(db: PgPool) -> Self {
-        todo!() // return an instance of QuestionsDaoImpl
+        QuestionsDaoImpl { db }
     }
 }
 
