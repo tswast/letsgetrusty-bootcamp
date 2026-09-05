@@ -87,15 +87,25 @@ impl AnswersDao for AnswersDaoImpl {
         //
         // If `parse_str` returns an error, map the error to a `DBError::InvalidUUID` error
         // and early return from this function.
-        let uuid = todo!();
+        let uuid = Uuid::parse_str(&answer_uuid)
+            .map_err(|err| DBError::InvalidUUID(format!("{:?}", err)))?;
 
-        // TODO: Make a database query to delete an answer given the answer uuid.
+        // Make a database query to delete an answer given the answer uuid.
         // Here is the SQL query:
         // ```
         // DELETE FROM answers WHERE answer_uuid = $1
         // ```
         // If executing the query results in an error, map that error
         // to a `DBError::Other` error and early return from this function.
+        query!(
+            r#"
+            DELETE FROM answers WHERE answer_uuid = $1
+            "#,
+            uuid,
+        )
+        .execute(&self.db)
+        .await
+        .map_err(|err| DBError::Other(Box::new(err)))?;
 
         Ok(())
     }
@@ -106,7 +116,8 @@ impl AnswersDao for AnswersDaoImpl {
         //
         // If `parse_str` returns an error, map the error to a `DBError::InvalidUUID` error
         // and early return from this function.
-        let uuid = todo!();
+        let uuid = Uuid::parse_str(&question_uuid)
+            .map_err(|err| DBError::InvalidUUID(format!("{:?}", err)))?;
 
         // Make a database query to get all answers associated with a question uuid.
         // Here is the SQL query:
@@ -115,10 +126,23 @@ impl AnswersDao for AnswersDaoImpl {
         // ```
         // If executing the query results in an error, map that error
         // to a `DBError::Other` error and early return from this function.
-        let records = todo!();
+        let records = query!(
+            r#"
+            SELECT * FROM answers WHERE question_uuid = $1
+            "#,
+            uuid,
+        )
+        .fetch_all(&self.db)
+        .await
+        .map_err(|err| DBError::Other(Box::new(err)))?;
 
         // Iterate over `records` and map each record to a `AnswerDetail` type
-        let answers = todo!();
+        let answers = records.iter().map(|record| AnswerDetail {
+            answer_uuid: record.answer_uuid.into(),
+            question_uuid: record.question_uuid.into(),
+            content: record.content.to_owned(),
+            created_at: record.created_at.to_string(),
+        }).collect();
 
         Ok(answers)
     }
